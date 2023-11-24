@@ -20,7 +20,8 @@ hotkey = "KeyT"
 script = "PowerShell -Command \"Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('Daemon Running')\""
 ```
 
-## Hotkey options (livesplit_hotkey::Hotkey https://docs.rs/livesplit-hotkey/latest/livesplit_hotkey/enum.KeyCode.html)
+## Hotkey options
+> Stringified versions of livesplit_hotkey::Hotkey @ `https://docs.rs/livesplit-hotkey/latest/livesplit_hotkey/enum.KeyCode.html`
 ```
 pub enum KeyCode {
     Backquote,
