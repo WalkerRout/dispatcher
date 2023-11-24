@@ -218,8 +218,8 @@ fn main() -> Result<(), Box<dyn Error>> {
       .privileged_action(|| "Executed before drop privileges\n");
 
     match daemon.start() {
-      Ok(v) => {
-        println!("{v}: Daemon successfully started, beginning loops...");
+      Ok(_) => {
+        println!("Daemon successfully started, beginning loops...");
         loops()?;
       },
       Err(e) => println!("{e}"),
