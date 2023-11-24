@@ -21,11 +21,13 @@ use livesplit_hotkey::{
 use std::fs;
 use std::env;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
-use std::sync::atomic::{
-  Ordering,
-  AtomicBool,
+use std::sync::{
+  Arc,
+  atomic::{
+    Ordering,
+    AtomicBool,
+  },
 };
 use std::error::Error;
 use std::thread;
