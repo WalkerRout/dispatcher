@@ -1,6 +1,6 @@
 
 // no stdout/stderr, need to redirect eventually
-#![windows_subsystem = "windows"]
+//#![windows_subsystem = "windows"]
 
 use serde::Deserialize;
 
@@ -61,12 +61,12 @@ impl KeyScriptMap {
   }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 struct Config {
   commands: Vec<Command>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 struct Command {
   alt: Option<bool>, // option
   meta: Option<bool>, // win, super, cmd
@@ -120,26 +120,24 @@ fn toml_config<S: AsRef<str>>(dispatch_toml_path: S) -> Result<Config, Box<dyn E
 
 fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<dyn Error>> {
   let hook = Hook::new()?;
+  let map = KeyScriptMap::from_config(config)?;
+    
+  for (key, script) in map.0 {
+    let pool = Arc::clone(pool);
 
-  if let Ok(map) = KeyScriptMap::from_config(config) {
-    // register all user keys
-    for (key, script) in map.0 {
-      let pool = Arc::clone(pool);
+    hook.register(key, move || {
+      let script = script.clone();
+      let fut = async move {
+        println!("running: `{}`", &script);
+        let mut command = command(script);
+        command.stdout(Stdio::piped());
+        if let Err(e) = command.execute_output() {
+          eprintln!("failed with: {e}");
+        }
+      };
 
-      hook.register(key, move || {
-        let script = script.clone();
-        let fut = async move {
-          println!("running: `{}`", &script);
-          let mut command = command(script);
-          command.stdout(Stdio::piped());
-          if let Err(e) = command.execute_output() {
-            eprintln!("failed with: {e}");
-          }
-        };
-
-        pool.spawn_ok(fut);
-      })?;
-    }
+      pool.spawn_ok(fut);
+    })?;
   }
 
   // did user accidentally register exit keycode?
@@ -164,7 +162,8 @@ fn construct_hook(pool: &Arc<ThreadPool>) -> Result<Hook, Box<dyn Error>> {
       .unwrap()
   };
 
-  let config = toml_config(dispatch_toml_path)?;
+  // ensure config is in valid state for registration regardless
+  let config = toml_config(dispatch_toml_path).unwrap_or_else(|_| Default::default());
   register_hotkeys(config, pool)
 }
 
