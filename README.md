@@ -20,6 +20,14 @@ hotkey = "KeyT"
 script = "PowerShell -Command \"Add-Type -AssemblyName PresentationFramework;[System.Windows.MessageBox]::Show('Daemon Running')\""
 ```
 
+## Modifier options
+```
+alt = true # option
+meta = true # cmd/super/win
+shift = true
+control = true
+```
+
 ## Hotkey options
 > Stringified versions of livesplit_hotkey::Hotkey @ https://docs.rs/livesplit-hotkey/latest/livesplit_hotkey/enum.KeyCode.html
 ```
