@@ -1,6 +1,6 @@
 
 // no stdout/stderr, need to redirect eventually
-//#![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 
 use serde::Deserialize;
 
