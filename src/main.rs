@@ -120,25 +120,26 @@ fn toml_config<S: AsRef<str>>(dispatch_toml_path: S) -> Result<Config, Box<dyn E
 
 fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<dyn Error>> {
   let hook = Hook::new()?;
-  let map = KeyScriptMap::from_config(config)?;
 
-  // register all user keys
-  for (key, script) in map.0 {
-    let pool = Arc::clone(pool);
+  if let Ok(map) = KeyScriptMap::from_config(config) {
+    // register all user keys
+    for (key, script) in map.0 {
+      let pool = Arc::clone(pool);
 
-    hook.register(key, move || {
-      let script = script.clone();
-      let fut = async move {
-        println!("running: `{}`", &script);
-        let mut command = command(script);
-        command.stdout(Stdio::piped());
-        if let Err(e) = command.execute_output() {
-          eprintln!("failed with: {e}");
-        }
-      };
+      hook.register(key, move || {
+        let script = script.clone();
+        let fut = async move {
+          println!("running: `{}`", &script);
+          let mut command = command(script);
+          command.stdout(Stdio::piped());
+          if let Err(e) = command.execute_output() {
+            eprintln!("failed with: {e}");
+          }
+        };
 
-      pool.spawn_ok(fut);
-    })?;
+        pool.spawn_ok(fut);
+      })?;
+    }
   }
 
   // did user accidentally register exit keycode?
@@ -176,12 +177,12 @@ fn main_loop() {
 // hold _hook for drop check
 fn event_loop() {
   let pool = Arc::new(ThreadPool::new().expect("failed to create ThreadPool"));
-  let mut _hook: Option<Hook> = construct_hook(&pool).ok();
+  let mut _hook = construct_hook(&pool).expect("failed to create Hook");
 
   while !TERMINATE.load(Ordering::Relaxed) { 
     thread::sleep(Duration::from_millis(5000)); // update every 5 seconds
     if let Ok(h) = construct_hook(&pool) {
-      _hook = Some(h);
+      _hook = h;
     }
   }
 }
