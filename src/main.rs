@@ -187,14 +187,11 @@ fn event_loop() {
   }
 }
 
-fn loops() -> Result<(), Box<dyn Error>> {
-  let mh = thread::spawn(move || main_loop());
-  let eh = thread::spawn(move || event_loop());
-
-  eh.join().expect("failed to join event thread");
-  mh.join().expect("failed to join main thread");
-
-  Ok(())
+fn loops() {
+  thread::scope(|s| {
+    s.spawn(|| main_loop());
+    s.spawn(|| event_loop());
+  });
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -219,7 +216,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     match daemon.start() {
       Ok(_) => {
         println!("Daemon successfully started, beginning loops...");
-        loops()?;
+        loops();
       },
       Err(e) => println!("{e}"),
     }
@@ -229,6 +226,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   #[cfg(target_family = "windows")]
   {
-    loops()
+    loops();
+    
+    Ok(())
   }
 }
