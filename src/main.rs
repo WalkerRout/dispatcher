@@ -174,9 +174,9 @@ fn main_loop() {
   }
 }
 
-// hold _hook for drop check
 fn event_loop() {
   let pool = Arc::new(ThreadPool::new().expect("failed to create ThreadPool"));
+  // hold _hook for drop check
   let mut _hook = construct_hook(&pool).expect("failed to create Hook");
 
   while !TERMINATE.load(Ordering::Relaxed) { 
