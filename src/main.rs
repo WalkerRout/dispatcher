@@ -37,17 +37,18 @@ use std::collections::HashMap;
 #[cfg(target_family = "unix")]
 use daemonize::Daemonize;
 
+const EVENT_HOOK_UPDATE_MS: u64 = 9000;
 static TERMINATE: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug)]
 struct KeyScriptMap(HashMap<Hotkey, String>);
 
 impl KeyScriptMap {
-  fn from_config(config: Config) -> Result<KeyScriptMap, Box<dyn Error>> {
+  fn from_config(config: Config) -> KeyScriptMap {
     let keys = config.commands
       .iter()
       .map(|c| c.into_hotkey())
-      .collect::<Result<Vec<_>, _>>()?;
+      .collect::<Vec<_>>();
 
     let scripts = config.commands
       .into_iter()
@@ -59,7 +60,7 @@ impl KeyScriptMap {
       .zip(scripts.into_iter())
       .collect();
 
-    Ok(KeyScriptMap(map))
+    KeyScriptMap(map)
   }
 }
 
@@ -79,13 +80,11 @@ struct Command {
 }
 
 impl Command {
-  fn into_hotkey(&self) -> Result<Hotkey, Box<dyn Error>> {
-    let key = Hotkey {
-      key_code: self.key_code()?,
+  fn into_hotkey(&self) -> Hotkey {
+    Hotkey {
+      key_code: self.key_code(),
       modifiers: self.modifiers()
-    };
-
-    Ok(key)
+    }
   }
 
   fn modifiers(&self) -> Modifiers {
@@ -99,8 +98,8 @@ impl Command {
     alt | meta | shift | control
   }
 
-  fn key_code(&self) -> Result<KeyCode, Box<dyn Error>> {
-    Ok(KeyCode::from_str(&self.hotkey).unwrap())
+  fn key_code(&self) -> KeyCode {
+    KeyCode::from_str(&self.hotkey).unwrap()
   }
 }
 
@@ -122,7 +121,7 @@ fn toml_config<S: AsRef<str>>(dispatch_toml_path: S) -> Result<Config, Box<dyn E
 
 fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<dyn Error>> {
   let hook = Hook::new()?;
-  let map = KeyScriptMap::from_config(config)?;
+  let map = KeyScriptMap::from_config(config);
     
   for (key, script) in map.0 {
     let pool = Arc::clone(pool);
@@ -181,7 +180,7 @@ fn event_loop() {
   let mut _hook = construct_hook(&pool).expect("failed to create Hook");
 
   while !TERMINATE.load(Ordering::Relaxed) { 
-    thread::sleep(Duration::from_millis(5000)); // update every 5 seconds
+    thread::sleep(Duration::from_millis(EVENT_HOOK_UPDATE_MS)); // update every n seconds
     if let Ok(h) = construct_hook(&pool) {
       _hook = h;
     }
