@@ -47,7 +47,7 @@ impl KeyScriptMap {
   fn from_config(config: Config) -> KeyScriptMap {
     let keys = config.commands
       .iter()
-      .map(|c| c.into_hotkey())
+      .map(|c| c.as_hotkey())
       .collect::<Vec<_>>();
 
     let scripts = config.commands
@@ -57,7 +57,7 @@ impl KeyScriptMap {
 
     let map = keys
       .into_iter()
-      .zip(scripts.into_iter())
+      .zip(scripts)
       .collect();
 
     KeyScriptMap(map)
@@ -80,7 +80,7 @@ struct Command {
 }
 
 impl Command {
-  fn into_hotkey(&self) -> Hotkey {
+  fn as_hotkey(&self) -> Hotkey {
     Hotkey {
       key_code: self.key_code(),
       modifiers: self.modifiers()
@@ -189,8 +189,8 @@ fn event_loop() {
 
 fn loops() {
   thread::scope(|s| {
-    s.spawn(|| main_loop());
-    s.spawn(|| event_loop());
+    s.spawn(main_loop);
+    s.spawn(event_loop);
   });
 }
 
