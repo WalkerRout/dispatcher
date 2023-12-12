@@ -1,5 +1,5 @@
 
-// no stdout/stderr, need to redirect eventually
+// no stdout/stderr
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::Deserialize;
@@ -175,9 +175,18 @@ fn main_loop() {
 }
 
 fn event_loop() {
+  // TODO: handle pool creation failure
   let pool = Arc::new(ThreadPool::new().expect("failed to create ThreadPool"));
   // hold _hook for drop check
-  let mut _hook = construct_hook(&pool).expect("failed to create Hook");
+  let mut _hook: Hook;
+  match construct_hook(&pool) {
+    Ok(hook) => _hook = hook,
+    Err(_) => {
+      TERMINATE.swap(true, Ordering::Relaxed);
+      // TODO: log error to daemon/daemon.err
+      return;
+    }
+  }
   
   while !TERMINATE.load(Ordering::Relaxed) { 
     thread::sleep(Duration::from_millis(EVENT_HOOK_UPDATE_MS)); // update every n seconds
@@ -195,6 +204,14 @@ fn loops() {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+  #[cfg(target_os = "macos")]
+  {
+    use std::io::{Error, ErrorKind};
+    
+    let msg = "[target_os = macos] - dispatcher not supported";
+    return Err(Box::new(Error::new(ErrorKind::Other, msg)));
+  }
+
   #[cfg(target_family = "unix")]
   {
     use fs::File;
@@ -226,6 +243,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   #[cfg(target_family = "windows")]
   {
+    // TODO: redirect stdout and stderr to daemon/daemon.out and daemon/daemon.err,
+    //       potentially using dependency injection with loops and a stdout+stderr wrapper
     loops();
     Ok(())
   }
