@@ -106,7 +106,7 @@ impl Command {
 fn exit_key() -> Hotkey {
   let key_code = KeyCode::KeyE;
   let modifiers = Modifiers::SHIFT | Modifiers::CONTROL | Modifiers::ALT;
-
+  
   Hotkey {
     key_code,
     modifiers,
@@ -178,7 +178,7 @@ fn event_loop() {
   let pool = Arc::new(ThreadPool::new().expect("failed to create ThreadPool"));
   // hold _hook for drop check
   let mut _hook = construct_hook(&pool).expect("failed to create Hook");
-
+  
   while !TERMINATE.load(Ordering::Relaxed) { 
     thread::sleep(Duration::from_millis(EVENT_HOOK_UPDATE_MS)); // update every n seconds
     if let Ok(h) = construct_hook(&pool) {
@@ -220,14 +220,13 @@ fn main() -> Result<(), Box<dyn Error>> {
       },
       Err(e) => println!("{e}"),
     }
-
+    
     Ok(())
   }
 
   #[cfg(target_family = "windows")]
   {
     loops();
-    
     Ok(())
   }
 }
