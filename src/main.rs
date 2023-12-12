@@ -34,9 +34,6 @@ use std::thread;
 use std::process::Stdio;
 use std::collections::HashMap;
 
-#[cfg(target_family = "unix")]
-use daemonize::Daemonize;
-
 const EVENT_HOOK_UPDATE_MS: u64 = 9000;
 static TERMINATE: AtomicBool = AtomicBool::new(false);
 
@@ -125,9 +122,9 @@ fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<
     
   for (key, script) in map.0 {
     let pool = Arc::clone(pool);
-
     hook.register(key, move || {
       let script = script.clone();
+
       let fut = async move {
         println!("running: `{}`", &script);
         let mut command = command(script);
@@ -197,6 +194,8 @@ fn loops() {
 fn main() -> Result<(), Box<dyn Error>> {
   #[cfg(target_family = "unix")]
   {
+    use daemonize::Daemonize;
+    
     use fs::File;
 
     let mut daemon_dir = env::current_exe()?;
