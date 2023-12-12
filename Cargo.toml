@@ -5,10 +5,10 @@ edition = "2021"
 
 [dependencies]
 livesplit-hotkey = "0.7.0"
+async_executors = { version = "0.7.0", features = ["threadpool"] }
 execute = "0.2.13"
 serde = "1.0.193"
 toml = "0.8.8"
-async_executors = { version = "0.7.0", features = ["threadpool"] }
 
 [target.'cfg(target_family = "unix")'.dependencies]
 daemonize = "0.5.0"

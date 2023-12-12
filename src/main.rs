@@ -1,5 +1,5 @@
 
-// no stdout/stderr, need to redirect eventually
+// no stdout/stderr
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::Deserialize;
@@ -44,7 +44,7 @@ impl KeyScriptMap {
   fn from_config(config: Config) -> KeyScriptMap {
     let keys = config.commands
       .iter()
-      .map(|c| c.into_hotkey())
+      .map(|c| c.as_hotkey())
       .collect::<Vec<_>>();
 
     let scripts = config.commands
@@ -54,7 +54,7 @@ impl KeyScriptMap {
 
     let map = keys
       .into_iter()
-      .zip(scripts.into_iter())
+      .zip(scripts)
       .collect();
 
     KeyScriptMap(map)
@@ -77,7 +77,7 @@ struct Command {
 }
 
 impl Command {
-  fn into_hotkey(&self) -> Hotkey {
+  fn as_hotkey(&self) -> Hotkey {
     Hotkey {
       key_code: self.key_code(),
       modifiers: self.modifiers()
@@ -103,7 +103,7 @@ impl Command {
 fn exit_key() -> Hotkey {
   let key_code = KeyCode::KeyE;
   let modifiers = Modifiers::SHIFT | Modifiers::CONTROL | Modifiers::ALT;
-
+  
   Hotkey {
     key_code,
     modifiers,
@@ -172,10 +172,19 @@ fn main_loop() {
 }
 
 fn event_loop() {
+  // TODO: handle pool creation failure
   let pool = Arc::new(ThreadPool::new().expect("failed to create ThreadPool"));
   // hold _hook for drop check
-  let mut _hook = construct_hook(&pool).expect("failed to create Hook");
-
+  let mut _hook: Hook;
+  match construct_hook(&pool) {
+    Ok(hook) => _hook = hook,
+    Err(_) => {
+      TERMINATE.swap(true, Ordering::Relaxed);
+      // TODO: log error to daemon/daemon.err
+      return;
+    }
+  }
+  
   while !TERMINATE.load(Ordering::Relaxed) { 
     thread::sleep(Duration::from_millis(EVENT_HOOK_UPDATE_MS)); // update every n seconds
     if let Ok(h) = construct_hook(&pool) {
@@ -186,12 +195,20 @@ fn event_loop() {
 
 fn loops() {
   thread::scope(|s| {
-    s.spawn(|| main_loop());
-    s.spawn(|| event_loop());
+    s.spawn(main_loop);
+    s.spawn(event_loop);
   });
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+  #[cfg(target_os = "macos")]
+  {
+    use std::io::{Error, ErrorKind};
+    
+    let msg = "[target_os = macos] - dispatcher not supported";
+    return Err(Box::new(Error::new(ErrorKind::Other, msg)));
+  }
+
   #[cfg(target_family = "unix")]
   {
     use daemonize::Daemonize;
@@ -219,14 +236,15 @@ fn main() -> Result<(), Box<dyn Error>> {
       },
       Err(e) => println!("{e}"),
     }
-
+    
     Ok(())
   }
 
   #[cfg(target_family = "windows")]
   {
+    // TODO: redirect stdout and stderr to daemon/daemon.out and daemon/daemon.err,
+    //       potentially using dependency injection with loops and a stdout+stderr wrapper
     loops();
-    
     Ok(())
   }
 }
