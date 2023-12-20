@@ -129,7 +129,7 @@ fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<
         println!("running: `{}`", &script);
         let mut command = command(script);
         command.stdout(Stdio::piped());
-        
+
         // disable console created for process on Windows
         #[cfg(target_family = "windows")]
         {
@@ -142,7 +142,7 @@ fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<
           eprintln!("failed with: {e}");
         }
       };
-
+      
       pool.spawn_ok(fut);
     })?;
   }
