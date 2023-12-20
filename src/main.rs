@@ -129,6 +129,15 @@ fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<
         println!("running: `{}`", &script);
         let mut command = command(script);
         command.stdout(Stdio::piped());
+        
+        // disable console created for process on Windows
+        #[cfg(target_family = "windows")]
+        {
+          use std::os::windows::process::CommandExt;
+          use winapi::um::winbase::CREATE_NO_WINDOW;
+          command.creation_flags(CREATE_NO_WINDOW);
+        }
+
         if let Err(e) = command.execute_output() {
           eprintln!("failed with: {e}");
         }
@@ -244,6 +253,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   {
     // TODO: redirect stdout and stderr to daemon/daemon.out and daemon/daemon.err,
     //       potentially using dependency injection with loops and a stdout+stderr wrapper
+
     loops();
     Ok(())
   }
