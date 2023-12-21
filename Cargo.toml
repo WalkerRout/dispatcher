@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 livesplit-hotkey = "0.7.0"
 async_executors = { version = "0.7.0", features = ["threadpool"] }
+futures-task = "*"
 execute = "0.2.13"
 log4rs = "1.2"
 serde = "1.0.193"

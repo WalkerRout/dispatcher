@@ -22,6 +22,8 @@ use execute::{
   Execute,
 };
 
+use futures_task::Spawn;
+
 use async_executors::ThreadPool;
 
 use livesplit_hotkey::{
@@ -161,7 +163,11 @@ fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<
         }
       };
       
-      pool.spawn_ok(fut);
+      if pool.status().is_ok() {
+        pool.spawn_ok(fut);
+      } else {
+        log::warn!("did not spawn future; pool status unlikely to accept new future");
+      }
     })?;
   }
 
