@@ -1,8 +1,21 @@
 
-// no stdout/stderr
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use log::LevelFilter;
+
 use serde::Deserialize;
+
+use log4rs::{
+  config::{
+    self, // config::Config because crate::Config conflicts
+    Root,
+    Appender,
+  },
+  append::{
+    file::FileAppender,
+  },
+  encode::pattern::PatternEncoder,
+};
 
 use execute::{
   command,
@@ -126,20 +139,20 @@ fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<
       let script = script.clone();
 
       let fut = async move {
-        println!("running: `{}`", &script);
+        log::info!("running: `{}`", &script);
         let mut command = command(script);
         command.stdout(Stdio::piped());
 
         // disable console created for process on Windows
         #[cfg(target_family = "windows")]
         {
-          use std::os::windows::process::CommandExt;
           use winapi::um::winbase::CREATE_NO_WINDOW;
+          use std::os::windows::process::CommandExt;
           command.creation_flags(CREATE_NO_WINDOW);
         }
 
         if let Err(e) = command.execute_output() {
-          eprintln!("failed with: {e}");
+          log::error!("failed with: {e}");
         }
       };
       
@@ -213,47 +226,51 @@ fn main() -> Result<(), Box<dyn Error>> {
   #[cfg(target_os = "macos")]
   {
     use std::io::{Error, ErrorKind};
-    
     let msg = "[target_os = macos] - dispatcher not supported";
     return Err(Box::new(Error::new(ErrorKind::Other, msg)));
   }
 
+  let mut daemon_dir = env::current_exe()?;
+  daemon_dir.pop();
+  daemon_dir.push("daemon");
+
+  let log_file = FileAppender::builder()
+    .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
+    .build(format!("{}/daemon.log", daemon_dir.display()))
+    .unwrap();
+
+  let config = config::Config::builder()
+    .appender(Appender::builder().build("log", Box::new(log_file)))
+    .build(Root::builder()
+      .appender("log")
+      .build(LevelFilter::Info))
+    .unwrap();
+
+  log4rs::init_config(config).unwrap();
+
   #[cfg(target_family = "unix")]
   {
     use daemonize::Daemonize;
-    
     use fs::File;
-
-    let mut daemon_dir = env::current_exe()?;
-    daemon_dir.pop();
-    daemon_dir.push("daemon");
-
-    let stdout = File::create(format!("{}/daemon.out", daemon_dir.display()))?;
-    let stderr = File::create(format!("{}/daemon.err", daemon_dir.display()))?;
 
     let daemon = Daemonize::new()
       .working_directory(daemon_dir)
       .pid_file("daemon.pid")
-      .stdout(stdout)
-      .stderr(stderr)
       .privileged_action(|| "Executed before drop privileges\n");
-
+    
     match daemon.start() {
       Ok(_) => {
-        println!("Daemon successfully started, beginning loops...");
+        log::info!("Daemon successfully started, beginning loops...");
         loops();
       },
-      Err(e) => println!("{e}"),
+      Err(e) => log::error!("{e}"),
     }
-    
+
     Ok(())
   }
 
   #[cfg(target_family = "windows")]
   {
-    // TODO: redirect stdout and stderr to daemon/daemon.out and daemon/daemon.err,
-    //       potentially using dependency injection with loops and a stdout+stderr wrapper
-
     loops();
     Ok(())
   }
