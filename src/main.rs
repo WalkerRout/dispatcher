@@ -240,7 +240,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   daemon_dir.push("daemon");
 
   let log_file = FileAppender::builder()
-    .encoder(Box::new(PatternEncoder::new("{d} - {m}{n}")))
+    .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S %Z)(utc)} - {m}{n}")))
     .build(format!("{}/daemon.log", daemon_dir.display()))
     .unwrap();
 
