@@ -93,17 +93,22 @@ impl Command {
   fn as_hotkey(&self) -> Hotkey {
     Hotkey {
       key_code: self.key_code(),
-      modifiers: self.modifiers()
+      modifiers: self.modifiers(),
     }
   }
 
   fn modifiers(&self) -> Modifiers {
     let def = Modifiers::empty();
+    let p_or_def = move |p, that| if p { that } else { def }; 
 
-    let alt     = self.alt.map(|_| Modifiers::ALT).unwrap_or(def);
-    let meta    = self.meta.map(|_| Modifiers::META).unwrap_or(def);
-    let shift   = self.shift.map(|_| Modifiers::SHIFT).unwrap_or(def);
-    let control = self.control.map(|_| Modifiers::CONTROL).unwrap_or(def);
+    let alt = self.alt
+      .map(|p| p_or_def(p, Modifiers::ALT)).unwrap_or(def);
+    let meta = self.meta
+      .map(|p| p_or_def(p, Modifiers::META)).unwrap_or(def);
+    let shift = self.shift
+      .map(|p| p_or_def(p, Modifiers::SHIFT)).unwrap_or(def);
+    let control = self.control
+      .map(|p| p_or_def(p, Modifiers::CONTROL)).unwrap_or(def);
   
     alt | meta | shift | control
   }
@@ -248,6 +253,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   log4rs::init_config(config).unwrap();
 
+  // must come after config
+  let loops_with_log = || {
+    log::info!("Daemon successfully started, beginning loops...");
+    loops();
+    log::info!("Daemon successfully stopped...");
+  };
+
   #[cfg(target_family = "unix")]
   {
     use daemonize::Daemonize;
@@ -260,8 +272,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     match daemon.start() {
       Ok(_) => {
-        log::info!("Daemon successfully started, beginning loops...");
-        loops();
+        loops_with_log();
       },
       Err(e) => log::error!("{e}"),
     }
@@ -271,7 +282,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   #[cfg(target_family = "windows")]
   {
-    loops();
+    loops_with_log();
     Ok(())
   }
 }
