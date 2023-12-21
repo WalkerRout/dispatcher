@@ -146,7 +146,7 @@ fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<
       let script = script.clone();
 
       let fut = async move {
-        log::info!("running: `{}`", &script);
+        log::info!("running script - [ {} ]", &script);
         let mut command = command(script);
         command.stdout(Stdio::piped());
 
@@ -172,7 +172,10 @@ fn register_hotkeys(config: Config, pool: &Arc<ThreadPool>) -> Result<Hook, Box<
   }
 
   // did user accidentally register exit keycode?
-  if let Err(_) = hook.unregister(exit_key()) {}
+  if let Err(_) = hook.unregister(exit_key()) {
+    log::warn!("do not register Alt+Shift+Control+E; that is the built-in exit keycode");
+  }
+
   hook.register(exit_key(), || {
     TERMINATE.swap(true, Ordering::Relaxed);
   })?;
@@ -213,7 +216,7 @@ fn event_loop() {
     Ok(hook) => _hook = hook,
     Err(_) => {
       TERMINATE.swap(true, Ordering::Relaxed);
-      // TODO: log error to daemon/daemon.err
+      log::error!("failed to construct_hook initially"));
       return;
     }
   }
