@@ -216,7 +216,7 @@ fn event_loop() {
     Ok(hook) => _hook = hook,
     Err(_) => {
       TERMINATE.swap(true, Ordering::Relaxed);
-      log::error!("failed to construct_hook initially"));
+      log::error!("failed to construct_hook initially");
       return;
     }
   }
